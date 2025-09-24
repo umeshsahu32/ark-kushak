@@ -55,7 +55,7 @@ const getUTMParameters = () => {
     const params = new URLSearchParams(window.location.search);
     return {
         utm_campaign: params.get('utm_campaign') || '',
-        utm_source: params.get('utm_source') || 'direct',
+        utm_source: params.get('utm_source') || 'google-ads',
         utm_medium: params.get('utm_medium') || 'none',
         utm_keywords: params.get('utm_term') || params.get('utm_keywords') || ''
     };
@@ -97,16 +97,40 @@ const submitToLeadSquared = async (formData, formName) => {
     ];
 
     try {
+        console.log('Submitting to LeadSquared:', { formData, payload });
+        
         const response = await fetch(apiUrl, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+            headers: { 
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify(payload),
+            mode: 'cors'
         });
 
-        return response.ok ? { success: true } : { success: false };
+        console.log('LeadSquared Response Status:', response.status);
+        console.log('LeadSquared Response Headers:', response.headers);
+        
+        const responseText = await response.text();
+        console.log('LeadSquared Response Body:', responseText);
+
+        if (response.ok) {
+            return { success: true };
+        } else {
+            return { 
+                success: false, 
+                error: `API Error: ${response.status} - ${responseText}`,
+                status: response.status
+            };
+        }
     } catch (error) {
-        console.error('API Error:', error);
-        return { success: false };
+        console.error('LeadSquared API Error:', error);
+        return { 
+            success: false, 
+            error: error.message,
+            type: error.name
+        };
     }
 };
 
@@ -122,13 +146,13 @@ let contactRecaptchaId, enquireRecaptchaId;
 window.onRecaptchaLoad = function() {
     if (document.getElementById('contact-recaptcha')) {
         contactRecaptchaId = grecaptcha.render('contact-recaptcha', {
-            sitekey: '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI'
+            sitekey: '6LfxZv8qAAAAAFD7--8fM8bpngV5KWavB0SuPG7r'
         });
     }
     
     if (document.getElementById('enquire-recaptcha')) {
         enquireRecaptchaId = grecaptcha.render('enquire-recaptcha', {
-            sitekey: '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI'
+            sitekey: '6LfxZv8qAAAAAFD7--8fM8bpngV5KWavB0SuPG7r'
         });
     }
 };
@@ -185,8 +209,14 @@ if (contactForm && contactMsg) {
             if (typeof contactRecaptchaId !== 'undefined' && grecaptcha) {
                 grecaptcha.reset(contactRecaptchaId);
             }
-            contactMsg.textContent = 'Error submitting form. Please try again.';
+            
+            // Show detailed error message
+            const errorMsg = result.error ? `Error: ${result.error}` : 'Error submitting form. Please try again.';
+            contactMsg.textContent = errorMsg;
             contactMsg.className = 'text-red-600';
+            
+            // Log detailed error for debugging
+            console.error('Contact form submission failed:', result);
         }
     });
 }
@@ -243,8 +273,14 @@ if (enquireForm && enquireMsg) {
             if (typeof enquireRecaptchaId !== 'undefined' && grecaptcha) {
                 grecaptcha.reset(enquireRecaptchaId);
             }
-            enquireMsg.textContent = 'Error submitting form. Please try again.';
+            
+            // Show detailed error message
+            const errorMsg = result.error ? `Error: ${result.error}` : 'Error submitting form. Please try again.';
+            enquireMsg.textContent = errorMsg;
             enquireMsg.className = 'text-red-600';
+            
+            // Log detailed error for debugging
+            console.error('Enquire form submission failed:', result);
         }
     });
 }

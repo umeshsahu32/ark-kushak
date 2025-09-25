@@ -2,6 +2,7 @@
 // CORE FUNCTIONALITY
 // ========================================
 
+
 // Header scroll effect
 const navShell = document.getElementById('nav-shell');
 const updateHeader = () => {
@@ -97,7 +98,6 @@ const submitToLeadSquared = async (formData, formName) => {
     ];
 
     try {
-        console.log('Submitting to LeadSquared:', { formData, payload });
         
         const response = await fetch(apiUrl, {
             method: 'POST',
@@ -109,11 +109,8 @@ const submitToLeadSquared = async (formData, formName) => {
             mode: 'cors'
         });
 
-        console.log('LeadSquared Response Status:', response.status);
-        console.log('LeadSquared Response Headers:', response.headers);
         
         const responseText = await response.text();
-        console.log('LeadSquared Response Body:', responseText);
 
         if (response.ok) {
             return { success: true };
@@ -139,27 +136,58 @@ const validateForm = (name, email, phone, facing) => {
     return name && /.+@.+\..+/.test(email) && phone && facing;
 };
 
-// reCAPTCHA variables
-let contactRecaptchaId, enquireRecaptchaId;
+// reCAPTCHA Enterprise implementation
+const SITE_KEY = '6LekfNQrAAAAANygXOBic8qfuKG3-fK-BspMWc0b';
 
-// reCAPTCHA initialization
-window.onRecaptchaLoad = function() {
-    if (document.getElementById('contact-recaptcha')) {
-        contactRecaptchaId = grecaptcha.render('contact-recaptcha', {
-            sitekey: '6LfxZv8qAAAAAFD7--8fM8bpngV5KWavB0SuPG7r'
-        });
-    }
+// Execute reCAPTCHA Enterprise
+// Call this whenever you need a token (e.g. before form submit)
+const executeRecaptcha = async (action = 'contact_form') => {
+    try {
     
-    if (document.getElementById('enquire-recaptcha')) {
-        enquireRecaptchaId = grecaptcha.render('enquire-recaptcha', {
-            sitekey: '6LfxZv8qAAAAAFD7--8fM8bpngV5KWavB0SuPG7r'
-        });
+      
+      if (typeof grecaptcha === 'undefined') {
+        console.error('reCAPTCHA not loaded - script may have failed to load');
+        return null;
+      }
+      
+      if (!grecaptcha.enterprise) {
+        console.error('reCAPTCHA Enterprise not available - check if using correct script');
+        return null;
+      }
+  
+      
+  
+      // Wait for reCAPTCHA to be ready
+      await new Promise((resolve) => {
+        if (grecaptcha.enterprise.ready) {
+          grecaptcha.enterprise.ready(resolve);
+        } else {
+          resolve();
+        }
+      });
+  
+      // Correct: call Google's API directly
+      const token = await grecaptcha.enterprise.execute(SITE_KEY, { action });
+  
+      
+      return token;
+    } catch (error) {
+      console.error('reCAPTCHA Enterprise error:', error);
+      console.error('Error details:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      });
+      return null;
     }
-};
+  };
 
 // Contact form handler
+
 const contactForm = document.getElementById('contact-form');
 const contactMsg = document.getElementById('contact-message');
+
+    
 
 if (contactForm && contactMsg) {
     contactForm.addEventListener('submit', async (e) => {
@@ -178,37 +206,29 @@ if (contactForm && contactMsg) {
             return;
         }
 
-        // reCAPTCHA check
-        const recaptchaResponse = (typeof contactRecaptchaId !== 'undefined' && grecaptcha) 
-            ? grecaptcha.getResponse(contactRecaptchaId) : '';
-        
-        if (!recaptchaResponse) {
-            contactMsg.textContent = 'Please complete the reCAPTCHA verification.';
-            contactMsg.className = 'text-red-600';
-            return;
-        }
-
         // Submit
         contactMsg.textContent = 'Submitting form, please wait...';
         contactMsg.className = 'text-blue-600';
         
+        // Execute reCAPTCHA Enterprise
+        const recaptchaToken = await executeRecaptcha('contact_form');
+
+        if (!recaptchaToken) {
+          contactMsg.textContent = 'Security verification failed. Please refresh the page and try again.';
+          contactMsg.className = 'text-red-600';
+          return;
+        }
+        
         const result = await submitToLeadSquared({ name, email, phone, facing }, 'contact-form');
 
         if (result.success) {
-            if (typeof contactRecaptchaId !== 'undefined' && grecaptcha) {
-                grecaptcha.reset(contactRecaptchaId);
-            }
-            
-        localStorage.setItem('arkKushakFormSubmitted', 'true');
+            localStorage.setItem('arkKushakFormSubmitted', 'true');
             localStorage.setItem('arkKushakFormData', JSON.stringify({
                 name, email, phone, facing, source: 'contact-form'
             }));
             
             window.location.href = 'thankyou.html';
         } else {
-            if (typeof contactRecaptchaId !== 'undefined' && grecaptcha) {
-                grecaptcha.reset(contactRecaptchaId);
-            }
             
             // Show detailed error message
             const errorMsg = result.error ? `Error: ${result.error}` : 'Error submitting form. Please try again.';
@@ -224,6 +244,8 @@ if (contactForm && contactMsg) {
 // Enquire form handler
 const enquireForm = document.getElementById('enquire-form');
 const enquireMsg = document.getElementById('enquire-message');
+
+
 
 if (enquireForm && enquireMsg) {
     enquireForm.addEventListener('submit', async (e) => {
@@ -242,26 +264,21 @@ if (enquireForm && enquireMsg) {
             return;
         }
 
-        // reCAPTCHA check
-        const recaptchaResponse = (typeof enquireRecaptchaId !== 'undefined' && grecaptcha) 
-            ? grecaptcha.getResponse(enquireRecaptchaId) : '';
-        
-        if (!recaptchaResponse) {
-            enquireMsg.textContent = 'Please complete the reCAPTCHA verification.';
-            enquireMsg.className = 'text-red-600';
-            return;
-        }
-
         // Submit
         enquireMsg.textContent = 'Submitting form, please wait...';
         enquireMsg.className = 'text-blue-600';
         
+        // Execute reCAPTCHA Enterprise
+        const recaptchaToken = await executeRecaptcha('enquire_form');
+        if (!recaptchaToken) {
+            enquireMsg.textContent = 'Security verification failed. Please refresh the page and try again.';
+            enquireMsg.className = 'text-red-600';
+            return;
+        }
+        
         const result = await submitToLeadSquared({ name, email, phone, facing }, 'enquire-form');
 
         if (result.success) {
-            if (typeof enquireRecaptchaId !== 'undefined' && grecaptcha) {
-                grecaptcha.reset(enquireRecaptchaId);
-            }
             
             localStorage.setItem('arkKushakFormSubmitted', 'true');
             localStorage.setItem('arkKushakFormData', JSON.stringify({
@@ -270,9 +287,6 @@ if (enquireForm && enquireMsg) {
             
             window.location.href = 'thankyou.html';
         } else {
-            if (typeof enquireRecaptchaId !== 'undefined' && grecaptcha) {
-                grecaptcha.reset(enquireRecaptchaId);
-            }
             
             // Show detailed error message
             const errorMsg = result.error ? `Error: ${result.error}` : 'Error submitting form. Please try again.';

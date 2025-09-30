@@ -130,6 +130,93 @@ const submitToLeadSquared = async (formData, formName) => {
         };
     }
 };
+// AKfycby9B5knA9HH53OljN-KS2yXlUIZd6MKvzzYmsvQ89z39ZYM5RaCM2-sZCaBkYem55bC
+// Submit to Google Sheets using JSONP
+const submitToGoogleSheets = (formData, formName) => {
+    return new Promise((resolve) => {
+        const utmParams = getUTMParameters();
+        
+        // Replace this URL with your Google Apps Script web app URL
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby9B5knA9HH53OljN-KS2yXlUIZd6MKvzzYmsvQ89z39ZYM5RaCM2-sZCaBkYem55bC/exec';
+        
+        const payload = {
+            timestamp: new Date().toISOString(),
+            name: formData.name,
+            email: formData.email,
+            phone: formData.phone,
+            facing: formData.facing,
+            formName: formName,
+            utm_campaign: utmParams.utm_campaign,
+            utm_source: utmParams.utm_source,
+            utm_medium: utmParams.utm_medium,
+            utm_keywords: utmParams.utm_keywords,
+            project: 'Ark Kushak'
+        };
+
+        console.log('Submitting to Google Sheets:', payload);
+        console.log('Google Script URL:', GOOGLE_SCRIPT_URL);
+        
+        // Create a unique callback function name
+        const callbackName = 'googleSheetsCallback_' + Date.now();
+        
+        // Create the callback function
+        window[callbackName] = function(response) {
+            console.log('Google Sheets response:', response);
+            
+            // Clean up
+            delete window[callbackName];
+            document.head.removeChild(script);
+            
+            if (response && response.success) {
+                console.log('Successfully submitted to Google Sheets');
+                resolve({ success: true });
+            } else {
+                console.error('Google Sheets submission failed:', response);
+                resolve({ 
+                    success: false, 
+                    error: response ? response.error : 'Unknown error'
+                });
+            }
+        };
+        
+        // Build URL with parameters and callback
+        const params = new URLSearchParams({
+            ...payload,
+            callback: callbackName
+        });
+        const urlWithParams = `${GOOGLE_SCRIPT_URL}?${params.toString()}`;
+        
+        // Create and inject script tag
+        const script = document.createElement('script');
+        script.src = urlWithParams;
+        script.onerror = function() {
+            console.error('Google Sheets script failed to load');
+            delete window[callbackName];
+            document.head.removeChild(script);
+            resolve({ 
+                success: false, 
+                error: 'Script failed to load'
+            });
+        };
+        
+        document.head.appendChild(script);
+        
+        // Timeout after 10 seconds
+        setTimeout(() => {
+            if (window[callbackName]) {
+                console.error('Google Sheets request timed out');
+                delete window[callbackName];
+                if (document.head.contains(script)) {
+                    document.head.removeChild(script);
+                }
+                resolve({ 
+                    success: false, 
+                    error: 'Request timed out'
+                });
+            }
+        }, 10000);
+    });
+};
 
 // Form validation helper
 const validateForm = (name, email, phone, facing) => {
@@ -219,24 +306,34 @@ if (contactForm && contactMsg) {
           return;
         }
         
-        const result = await submitToLeadSquared({ name, email, phone, facing }, 'contact-form');
+        // Submit to both LeadSquared and Google Sheets
+        const [leadSquaredResult, googleSheetsResult] = await Promise.allSettled([
+            submitToLeadSquared({ name, email, phone, facing }, 'contact-form'),
+            submitToGoogleSheets({ name, email, phone, facing }, 'contact-form')
+        ]);
 
-        if (result.success) {
+        // Check if at least one submission was successful
+        const leadSquaredSuccess = leadSquaredResult.status === 'fulfilled' && leadSquaredResult.value.success;
+        const googleSheetsSuccess = googleSheetsResult.status === 'fulfilled' && googleSheetsResult.value.success;
+
+        if (leadSquaredSuccess || googleSheetsSuccess) {
             localStorage.setItem('arkKushakFormSubmitted', 'true');
             localStorage.setItem('arkKushakFormData', JSON.stringify({
                 name, email, phone, facing, source: 'contact-form'
             }));
-            
+            console.log('Contact form submission successful');
             window.location.href = 'thankyou.html';
         } else {
-            
             // Show detailed error message
-            const errorMsg = result.error ? `Error: ${result.error}` : 'Error submitting form. Please try again.';
+            const leadSquaredError = leadSquaredResult.status === 'rejected' ? leadSquaredResult.reason : leadSquaredResult.value?.error;
+            const googleSheetsError = googleSheetsResult.status === 'rejected' ? googleSheetsResult.reason : googleSheetsResult.value?.error;
+            
+            const errorMsg = `Error submitting form. LeadSquared: ${leadSquaredError || 'Failed'}, Google Sheets: ${googleSheetsError || 'Failed'}`;
             contactMsg.textContent = errorMsg;
             contactMsg.className = 'text-red-600';
             
             // Log detailed error for debugging
-            console.error('Contact form submission failed:', result);
+            console.error('Contact form submission failed:', { leadSquaredResult, googleSheetsResult });
         }
     });
 }
@@ -276,25 +373,36 @@ if (enquireForm && enquireMsg) {
             return;
         }
         
-        const result = await submitToLeadSquared({ name, email, phone, facing }, 'enquire-form');
+        // Submit to both LeadSquared and Google Sheets
+        const [leadSquaredResult, googleSheetsResult] = await Promise.allSettled([
+            submitToLeadSquared({ name, email, phone, facing }, 'enquire-form'),
+            submitToGoogleSheets({ name, email, phone, facing }, 'enquire-form')
+        ]);
 
-        if (result.success) {
+        // Check if at least one submission was successful
+        const leadSquaredSuccess = leadSquaredResult.status === 'fulfilled' && leadSquaredResult.value.success;
+        const googleSheetsSuccess = googleSheetsResult.status === 'fulfilled' && googleSheetsResult.value.success;
+
+        if (leadSquaredSuccess || googleSheetsSuccess) {
             
             localStorage.setItem('arkKushakFormSubmitted', 'true');
             localStorage.setItem('arkKushakFormData', JSON.stringify({
                 name, email, phone, facing, source: 'enquire-form'
             }));
-            
+            console.log('Enquire form submission successful');
             window.location.href = 'thankyou.html';
         } else {
             
             // Show detailed error message
-            const errorMsg = result.error ? `Error: ${result.error}` : 'Error submitting form. Please try again.';
+            const leadSquaredError = leadSquaredResult.status === 'rejected' ? leadSquaredResult.reason : leadSquaredResult.value?.error;
+            const googleSheetsError = googleSheetsResult.status === 'rejected' ? googleSheetsResult.reason : googleSheetsResult.value?.error;
+            
+            const errorMsg = `Error submitting form. LeadSquared: ${leadSquaredError || 'Failed'}, Google Sheets: ${googleSheetsError || 'Failed'}`;
             enquireMsg.textContent = errorMsg;
             enquireMsg.className = 'text-red-600';
             
             // Log detailed error for debugging
-            console.error('Enquire form submission failed:', result);
+            console.error('Enquire form submission failed:', { leadSquaredResult, googleSheetsResult });
         }
     });
 }

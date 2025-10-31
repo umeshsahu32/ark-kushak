@@ -609,7 +609,7 @@
                     <polyline points="7 10 12 15 17 10" />
                     <line x1="12" y1="15" x2="12" y2="3" />
                   </svg> -->
-                  <span>Enquire Now</span>
+                  <span>Download Brochure</span>
                 </a>
               </div>
             </div>
@@ -1808,15 +1808,17 @@
     </main>
 
     <!-- Enquire Floating Button and Sidebar -->
-    <button
-      id="enquire-toggle"
-      class="fixed right-0 top-1/2 -translate-y-1/2 z-40 hidden flex items-center justify-center rounded-l bg-brand text-white px-2 py-3 shadow-lg hover:bg-brand-dark focus:outline-none focus:ring-2 focus:ring-brand"
-      aria-controls="enquire-panel"
-      aria-expanded="false"
-      type="button"
-    >
-      <span class="text-lg tracking-wide">Enquire Now</span>
-    </button>
+    <div class="hidden sm:block">
+      <button
+        id="enquire-toggle"
+        class="fixed right-0 top-1/2 -translate-y-1/2 z-40 flex items-center justify-center rounded-l bg-brand text-white px-2 py-3 shadow-lg hover:bg-brand-dark focus:outline-none focus:ring-2 focus:ring-brand"
+        aria-controls="enquire-panel"
+        aria-expanded="false"
+        type="button"
+      >
+        <span class="text-lg tracking-wide">Download Brochure</span>
+      </button>
+    </div>
 
     <aside
       id="enquire-panel"
@@ -2071,5 +2073,32 @@
 
     <!-- Main JavaScript -->
     <script src="script.js" defer></script>
+    
+    <!-- Fixed Bottom CTA Buttons -->
+    <div
+      id="sticky-cta"
+      class="fixed bottom-0 left-0 right-0 z-[70] bg-white/90 backdrop-blur border-t border-slate-200 sm:hidden"
+      role="region"
+      aria-label="Quick actions"
+    >
+      <div class="mx-auto max-w-7xl px-3 sm:px-4 py-2">
+        <div class="flex gap-3">
+          <a
+            href="#contact"
+            class="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-md bg-gradient-to-r from-brand to-brand-dark text-white shadow-md hover:from-brand-dark hover:to-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand text-sm font-medium"
+            aria-label="Enquire Now"
+          >
+            <span>Download Brochure</span>
+          </a>
+          <a
+            href="tel:+919513170399"
+            class="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-md bg-emerald-600 text-white shadow-md hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-emerald-600 text-sm font-medium"
+            aria-label="Call Now 9513170399"
+          >
+            <span>Call Now</span>
+          </a>
+        </div>
+      </div>
+    </div>
   </body>
 </html>

@@ -536,9 +536,13 @@ const setEnquireOpen = (open) => {
 
 // Show enquire button after scrolling
 const updateEnquireButton = () => {
-    if (enquireToggle) {
-        enquireToggle.classList.toggle('hidden', window.scrollY <= 300);
+    if (!enquireToggle) return;
+    // Keep hidden on mobile (<640px)
+    if (window.innerWidth < 640) {
+        enquireToggle.classList.add('hidden');
+        return;
     }
+    enquireToggle.classList.toggle('hidden', window.scrollY <= 300);
 };
 
 window.addEventListener('scroll', updateEnquireButton, { passive: true });
@@ -546,6 +550,8 @@ window.addEventListener('scroll', updateEnquireButton, { passive: true });
 // Auto-open after 5 seconds if no form submitted
 setTimeout(() => {
     const formSubmitted = localStorage.getItem('arkKushakFormSubmitted');
+    // Do not auto-show on mobile
+    if (window.innerWidth < 640) return;
     if (enquirePanel && enquireToggle && formSubmitted !== 'true') {
         enquireToggle.classList.remove('hidden');
         setEnquireOpen(true);
@@ -580,7 +586,10 @@ const downloadBrochure = (event) => {
     } else {
         showMessage('Please fill out the form to download the brochure', 'info');
         if (enquirePanel && enquireToggle) {
-            enquireToggle.classList.remove('hidden');
+            // Avoid revealing toggle on mobile
+            if (window.innerWidth >= 640) {
+                enquireToggle.classList.remove('hidden');
+            }
             setEnquireOpen(true);
         }
     }
